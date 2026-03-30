@@ -320,6 +320,72 @@ Matrix softmax(const Matrix& m) {
     return result;
 }
 
+// Attention 함수
+Matrix attention(const Matrix& Q,
+                 const Matrix& K,
+                 const Matrix& V) {
+
+    // 1. Q · Kᵀ (유사도 계산) 
+    Matrix scores = Q * K.transpose();
+
+    // 2. scaling
+    double scale = std::sqrt(Q.cols());
+    for (int i=0; i<scores.rows(); i++) {
+        for (int j=0; j<scores.cols(); j++) {
+            scores[i][j] /= scale;
+        }
+    }
+
+    // 3. softmax (각 행마다 확률)
+    Matrix weights = softmax(scores);
+
+    // 4. weight · V (정보 조합)
+    Matrix result = weights * V;
+
+    return result;
+}
+
+Matrix multiHeadAttention(const Matrix& Q,
+                          const Matrix& K,
+                          const Matrix& V,
+                          int num_heads) {
+
+    int d = Q.cols();
+    int head_dim = d / num_heads;
+
+    int n = Q.rows();
+
+    // 출력용 결과
+    Matrix result(n, d);
+
+    for (int h=0; h<num_heads; h++) {
+        Matrix Qh(n, head_dim);
+        Matrix Kh(n, head_dim);
+        Matrix Vh(n, head_dim);
+
+        for (int i=0; i<n; i++) {
+            for (int j=0; j<d; j++) {
+                int col = h * head_dim + j;
+
+                Qh[i][j] = Q[i][col];
+                Kh[i][j] = K[i][col];
+                Vh[i][j] = V[i][col];
+            }
+        }
+
+        Matrix out = attention(Qh, Kh, Vh);
+
+        for (int i=0; i<n; i++) {
+            for (int j=0; j<head_dim; j++) {
+                int col = h * head_dim + j;
+                result[i][col] = out [i][j];
+            }
+        }
+    }
+
+    return result;
+}
+
 // 아래는 예제
 
 void returnMatrixCout(const Matrix& A) {
@@ -383,6 +449,17 @@ void program4() {
     return;
 }
 
+void program5() {
+
+    Matrix Q({{1,0},{0,1}});
+    Matrix K({{1,0},{0,1}});
+    Matrix V({{10,0},{0,20}});
+
+    Matrix out = attention(Q, K, V);
+
+    returnMatrixCout(out);
+    return;
+}
 
 // 여기서부터는 메인
 
@@ -390,7 +467,7 @@ int main() {
     
     cout << "[START]==============\n\n";
 
-    program4();
+    program5();
 
     while (true) {
         string tmp;
