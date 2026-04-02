@@ -253,7 +253,7 @@ Vector Matrix::operator*(const Vector& v) const {
 
 // Matrix 합
 Matrix operator+(const Matrix& A, const Matrix& B) {
-    if (A.cols() != B.cols || A.rows(), B.rows()) throw runtime_error("Matrix size not matching!!");
+    if (A.cols() != B.cols() || A.rows(), B.rows()) throw runtime_error("Matrix size not matching!!");
 
     Matrix result(A.rows(), A.cols()); 
 
@@ -458,8 +458,26 @@ Matrix transformerBlock(const Matrix& X,
                         const Matrix& Wk, const Vector& bk,
                         const Matrix& Wv, const Vector& bv,
                         const Matrix& W1, const Vector& b1,
-                        const Matrix& W2, const Vector& b2) {
+                        const Matrix& W2, const Vector& b2,
+                        int num_heads) {
 
+    Matrix Q = linear(X, Wq, bq);
+    Matrix K = linear(X, Wk, bk);
+    Matrix V = linear(X, Wv, bv);
+
+    // Multi-head Attention
+    Matrix attn = multiHeadAttention(Q, K, V, num_heads);
+
+    // Residual
+    Matrix H = X + attn;
+
+    // ff
+    Matrix ff = feetForward(H, W1, b1, W2, b2);
+
+    // Residual
+    Matrix Y = H + ff;
+
+    return Y;
 }
 
 // 아래는 예제
