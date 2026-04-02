@@ -452,6 +452,16 @@ Matrix feetForward(const Matrix& X,
     return result;
 }
 
+// 
+Matrix transformerBlock(const Matrix& X,
+                        const Matrix& Wq, const Vector& bq,
+                        const Matrix& Wk, const Vector& bk,
+                        const Matrix& Wv, const Vector& bv,
+                        const Matrix& W1, const Vector& b1,
+                        const Matrix& W2, const Vector& b2) {
+
+}
+
 // 아래는 예제
 
 void returnMatrixCout(const Matrix& A) {
