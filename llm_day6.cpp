@@ -528,7 +528,39 @@ Matrix positionalEncoding(int n, int d) {
 }
 
 Matrix tokenEmbedding(const vector<int>& tokens, const Matrix& embTable) {
-    
+    int n = tokens.size();
+    int d = embTable.cols();
+
+    Matrix result(n, d);
+
+    for (int i=0; i<n; i++) {
+        int id = tokens[i];
+
+        for (int j=0; j<d; j++) {
+            result[i][j] = embTable[id][j];
+        }
+    }
+
+    return result;
+}
+
+Matrix lmHead(const Matrix& X, const Matrix& W, const Vector& b) {
+    Matrix logits = linear(X, W, b);
+
+    Matrix probs = softmax(logits);
+
+    return probs;
+}
+
+Vector forward(const vector<int>& tokens, const Matrix& embTable,
+                const Matrix& Wq, const Vector& bq,
+                const Matrix& Wk, const Vector& bk,
+                const Matrix& Wv, const Vector& bv,
+                const Matrix& W1, const Vector& b1,
+                const Matrix& W2, const Vector& b2,
+                const Matrix& Wlm, const Vector& Vlm, int num_heads
+            ) {
+
 }
 
 // 아래는 예제
@@ -633,3 +665,7 @@ int main() {
     }
     return 0;
 };
+
+/*
+
+*/
