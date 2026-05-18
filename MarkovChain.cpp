@@ -62,11 +62,11 @@ public :
 
         for (int i=0; i<max_words_count; i++) {
             vector<string> str = table[key];
-            result += " " + str[rng % str.size()];
+            result.push_back(" " + str[rng() % str.size()]);
+            if (table.find(key) == table.end()) break;
         }
 
         return getTrainTokenString(result, 0, result.size()-1);
     }
     
 };
-
