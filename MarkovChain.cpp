@@ -61,12 +61,14 @@ public :
         vector<string> result = tokenize(key);
 
         for (int i=0; i<max_words_count; i++) {
-            vector<string> str = table[key];
-            result.push_back(" " + str[rng() % str.size()]);
+            string str = table[key];
             if (table.find(key) == table.end()) break;
+            result.push_back(str[rng() % result.size()]);
+            key = 
         }
 
         return getTrainTokenString(result, 0, result.size()-1);
     }
     
 };
+
