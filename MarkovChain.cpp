@@ -53,6 +53,8 @@ public :
     }
 
     string generate(int max_words_count = 20) {
+        if (table.empty()) return "";
+
         string key;
         auto it = table.begin();
         advance(it, rng() % table.size());
@@ -61,14 +63,41 @@ public :
         vector<string> result = tokenize(key);
 
         for (int i=0; i<max_words_count; i++) {
-            string str = table[key];
+            
+            // nexts (vector<string>) 을 만들어서, 다음에 들어올 수 있는 단어들을 넣어두기
+            vector<string> nexts = table[key];
+
+            // rng() 를 이용하여, 랜덤으로 선택 후 결과값에 추가.
+            string next = nexts[rng() % nexts.size()];
+            result.push_back(next);
+
+            // key 를 현재 고른 단어에서 다음 단어로 바꾸어줘야함??
+            vector<string> tmp = tokenize(key);
+            tmp.erase(tmp.begin());
+            tmp.push_back(next);
+            key = getTrainTokenString(tmp, 0, tmp.size()-1);
+
+            // 탈출 조건?
             if (table.find(key) == table.end()) break;
-            result.push_back(str[rng() % result.size()]);
-            key = 
         }
 
         return getTrainTokenString(result, 0, result.size()-1);
     }
-    
 };
 
+int main() {
+    MarkovChain mc(2);
+
+    cout << "학습할 텍스트를 입력하세요 (끝나면 빈 줄 엔터):\n";
+
+    string line, corpus;
+    while (getline(cin, line)) {
+        if (line.empty()) break;
+        corpus += line + " ";
+    }
+
+    mc.train(corpus);
+
+    cout << "\n생성 결과:\n";
+    cout << mc.generate(30) << "\n";
+}
