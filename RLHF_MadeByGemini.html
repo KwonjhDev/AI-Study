@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 선호도 토너먼트 시뮬레이터</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Pretendard', sans-serif;
+        }
+        /* Custom smooth transition for list sorting */
+        .list-move {
+            transition: transform 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-950/50 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">AI 선호도 시뮬레이터</h1>
+                    <p class="text-xs text-slate-400">Matchmaking & RL Preference Learning Sim</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btn-open-settings" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 transition text-sm font-medium rounded-lg flex items-center gap-1.5 border border-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    옵션 설정
+                </button>
+                <button id="btn-reset" class="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800 text-rose-300 transition text-sm font-medium rounded-lg">
+                    초기화
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Column: Simulation Arena (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- Question Card -->
+            <div class="bg-gradient-to-br from-indigo-950/50 to-slate-900/50 border border-indigo-500/20 rounded-2xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-md">
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-2xl"></div>
+                <div class="text-indigo-400 text-xs font-bold uppercase tracking-wider mb-2">오늘의 질문 Q</div>
+                <h2 id="display-question" class="text-xl sm:text-2xl font-extrabold text-white leading-relaxed">
+                    오늘 점심으로 먹기 좋은게 뭐가 있을까?
+                </h2>
+                <div class="mt-4 flex flex-wrap gap-3 items-center text-sm text-slate-400">
+                    <span class="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        라운드: <strong id="stat-round" class="text-slate-100">1</strong> / <span id="stat-max-round">1000</span>
+                    </span>
+                    <span class="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700">
+                        상태: <strong id="stat-mode-badge" class="text-emerald-400">수동 선택 대기</strong>
+                    </span>
+                </div>
+            </div>
+
+            <!-- VS Selection Zone -->
+            <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between flex-1 min-h-[340px] relative">
+                <div class="text-center text-xs text-slate-500 font-medium mb-4 uppercase tracking-widest">실시간 매치업</div>
+
+                <div class="grid grid-cols-1 md:grid-cols-11 items-center gap-4 relative my-auto">
+                    <!-- Option 1 Card -->
+                    <button id="option-a-card" class="md:col-span-5 group relative bg-gradient-to-b from-slate-800 to-slate-900 hover:from-indigo-950 hover:to-indigo-900 border-2 border-slate-700 hover:border-indigo-500 rounded-2xl p-8 text-center transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-indigo-500/10 flex flex-col items-center justify-center gap-4 min-h-[160px]">
+                        <div class="absolute top-3 left-3 bg-slate-900/80 group-hover:bg-indigo-950 border border-slate-700 group-hover:border-indigo-500 text-xs text-slate-400 group-hover:text-indigo-300 px-2.5 py-1 rounded-md font-bold transition">1번 선택지</div>
+                        <span id="option-a-text" class="text-xl sm:text-2xl font-bold text-white transition group-hover:scale-105">학식</span>
+                        <span id="option-a-score" class="text-xs text-indigo-400 font-medium bg-indigo-950/60 border border-indigo-900/60 px-2.5 py-0.5 rounded-full">점수: 0.50</span>
+                    </button>
+
+                    <!-- VS Divider -->
+                    <div class="md:col-span-1 flex flex-col items-center justify-center relative z-10 py-2 md:py-0">
+                        <div class="w-10 h-10 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center font-black italic text-slate-400 text-sm shadow-xl shadow-black/40">VS</div>
+                        <div class="hidden md:block w-[1px] h-12 bg-gradient-to-b from-transparent via-slate-700 to-transparent absolute -top-12"></div>
+                        <div class="hidden md:block w-[1px] h-12 bg-gradient-to-b from-slate-700 via-transparent to-transparent absolute -bottom-12"></div>
+                    </div>
+
+                    <!-- Option 2 Card -->
+                    <button id="option-b-card" class="md:col-span-5 group relative bg-gradient-to-b from-slate-800 to-slate-900 hover:from-purple-950 hover:to-purple-900 border-2 border-slate-700 hover:border-purple-500 rounded-2xl p-8 text-center transition-all duration-300 transform hover:-translate-y-1 shadow-lg hover:shadow-purple-500/10 flex flex-col items-center justify-center gap-4 min-h-[160px]">
+                        <div class="absolute top-3 left-3 bg-slate-900/80 group-hover:bg-purple-950 border border-slate-700 group-hover:border-purple-500 text-xs text-slate-400 group-hover:text-purple-300 px-2.5 py-1 rounded-md font-bold transition">2번 선택지</div>
+                        <span id="option-b-text" class="text-xl sm:text-2xl font-bold text-white transition group-hover:scale-105">도시락</span>
+                        <span id="option-b-score" class="text-xs text-purple-400 font-medium bg-purple-950/60 border border-purple-900/60 px-2.5 py-0.5 rounded-full">점수: 0.50</span>
+                    </button>
+                </div>
+
+                <!-- Simulation Control Panel -->
+                <div class="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <button id="btn-toggle-ai" class="flex-1 sm:flex-none px-5 py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 transition font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25">
+                            <span id="ai-btn-spinner" class="hidden w-4 h-4 border-2 border-slate-100 border-t-transparent rounded-full animate-spin"></span>
+                            <span id="ai-btn-text">Run_AI 자동 실행</span>
+                        </button>
+                        <button id="btn-next-manual" class="px-4 py-3 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 transition font-semibold rounded-xl text-slate-300 text-sm" title="선택을 건너뛰거나 새로운 랜덤 매치 생성">
+                            건너뛰기
+                        </button>
+                    </div>
+
+                    <!-- AI Speed Controller -->
+                    <div id="speed-control-wrapper" class="w-full sm:w-48 flex flex-col gap-1.5 opacity-50 transition hover:opacity-100">
+                        <div class="flex justify-between text-xs font-semibold text-slate-400">
+                            <span>AI 분석 딜레이</span>
+                            <span id="speed-display">100ms</span>
+                        </div>
+                        <input id="speed-slider" type="range" min="10" max="1000" step="10" value="100" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats & Explanation Card -->
+            <div class="bg-slate-950/30 border border-slate-800/80 rounded-2xl p-5 text-sm text-slate-400 leading-relaxed flex flex-col gap-3">
+                <div class="flex items-center gap-2 text-slate-300 font-semibold text-xs uppercase tracking-wider">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    학습 알고리즘 가이드
+                </div>
+                <p>
+                    두 선택지가 맞대결을 벌일 때마다 <span class="text-indigo-300 font-medium">선택된 항목은 점수가 +0.05 상승</span>하고, <span class="text-rose-400 font-medium">선택받지 못한 항목은 -0.02 하락</span>(최소 0.0)합니다. AI 모드 활성화 시 각 항목의 점수 비율에 따른 확률형 복합 의사결정을 수행하여 장기 시뮬레이션을 정밀하게 수행합니다.
+                </p>
+            </div>
+        </section>
+
+        <!-- Right Column: Live Leaderboard (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Realtime Leaderboard -->
+            <div class="bg-slate-950/40 border border-slate-800 rounded-2xl p-6 flex flex-col h-full max-h-[750px]">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="font-bold text-lg text-white">실시간 선호도 순위</h3>
+                        <p class="text-xs text-slate-400">실시간 스코어 정렬</p>
+                    </div>
+                    <span id="total-items-badge" class="px-2.5 py-1 bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-400 rounded-lg">6개 선택지</span>
+                </div>
+
+                <!-- Leaderboard List -->
+                <div id="leaderboard-container" class="flex-1 overflow-y-auto space-y-3 pr-1 scrollbar-thin scrollbar-thumb-slate-800">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+
+                <!-- Match Log Stream at bottom of Leaderboard -->
+                <div class="mt-6 pt-4 border-t border-slate-800">
+                    <div class="flex justify-between text-xs text-slate-500 font-semibold uppercase mb-2">
+                        <span>실시간 매치 로그</span>
+                        <span id="clear-logs" class="hover:text-indigo-400 cursor-pointer transition">지우기</span>
+                    </div>
+                    <div id="log-container" class="h-24 overflow-y-auto text-xs space-y-1 pr-1 font-mono text-slate-400 scrollbar-thin scrollbar-thumb-slate-800">
+                        <!-- Dynamic logs -->
+                        <div class="text-indigo-400/70">시뮬레이터가 정상적으로 로드되었습니다.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center mb-5 pb-3 border-b border-slate-800">
+                <h3 class="font-bold text-lg text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    옵션 및 매개변수 설정
+                </h3>
+                <button id="btn-close-settings" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-5 overflow-y-auto pr-1 flex-1">
+                <!-- Question input -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-400 uppercase">시뮬레이션 주제 질문</label>
+                    <input id="input-question" type="text" class="bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition" placeholder="점심 추천 질문을 작성해주세요.">
+                </div>
+
+                <!-- Max Round input -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-400 uppercase">전체 시도 횟수 (MAX_ROUND)</label>
+                    <input id="input-max-round" type="number" min="1" max="100000" class="bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition" placeholder="기본값: 1000">
+                </div>
+
+                <!-- Manage items list -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-slate-400 uppercase">아이템 관리 (텍스트 입력 후 추가)</label>
+                    <div class="flex gap-2">
+                        <input id="input-new-item" type="text" class="bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 transition flex-1" placeholder="새 아이템 이름">
+                        <button id="btn-add-item" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 transition text-sm font-semibold rounded-lg">추가</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <span class="text-xs font-semibold text-slate-400 uppercase">등록된 아이템 목록</span>
+                    <div id="settings-items-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        <!-- Dynamic list of items to remove/view -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end gap-2">
+                <button id="btn-save-settings" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 transition text-sm font-semibold rounded-lg text-white">
+                    설정 저장 및 반영
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simulation End Notification Modal -->
+    <div id="end-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-indigo-950 to-slate-900 border border-indigo-500/30 w-full max-w-md rounded-2xl shadow-2xl p-8 text-center flex flex-col items-center">
+            <div class="w-16 h-16 bg-indigo-500/20 border border-indigo-500 text-indigo-400 rounded-full flex items-center justify-center mb-4 animate-bounce">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+            </div>
+            <h3 class="font-extrabold text-2xl text-white mb-2">시뮬레이터 완료!</h3>
+            <p class="text-sm text-slate-300 mb-6">설정된 총 <span id="end-modal-rounds" class="text-indigo-400 font-bold">1000</span>라운드의 토너먼트 시뮬레이션이 모두 끝나 최고의 결과가 확정되었습니다!</p>
+
+            <div class="w-full bg-slate-900/80 border border-slate-800 p-4 rounded-xl mb-6 text-left">
+                <span class="text-xs text-indigo-400 font-bold tracking-wider uppercase">최종 추천 선택지</span>
+                <div id="end-winner-text" class="text-xl font-bold text-white mt-1">학식</div>
+                <div id="end-winner-score" class="text-xs text-slate-400 mt-0.5">최종 점수: 2.15</div>
+            </div>
+
+            <div class="flex gap-2 w-full">
+                <button id="btn-end-reset" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-500 transition font-semibold rounded-xl text-white">
+                    처음부터 다시 시뮬레이션
+                </button>
+                <button id="btn-end-close" class="px-5 py-3 bg-slate-800 hover:bg-slate-700 transition font-semibold rounded-xl text-slate-300">
+                    순위 보기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800/80 py-4 text-center text-xs text-slate-500 bg-slate-950/20">
+        <div>C++ Code Ported to Web Interface • Made with Google Gemini</div>
+    </footer>
+
+    <!-- Custom Logic Code -->
+    <script>
+        // Default initial dataset as represented in original C++ code
+        let defaultQuestion = "오늘 점심으로 먹기 좋은게 뭐가 있을까?";
+        let defaultMaxRounds = 1000;
+        let defaultAnswers = [
+            { text: "학식", score: 0.5 },
+            { text: "도시락", score: 0.5 },
+            { text: "라면", score: 0.5 },
+            { text: "삼각김밥", score: 0.5 },
+            { text: "이온음료", score: 0.5 },
+            { text: "철근", score: 0.5 }
+        ];
+
+        // System State
+        let question = defaultQuestion;
+        let maxRounds = defaultMaxRounds;
+        let answers = JSON.parse(JSON.stringify(defaultAnswers));
+        let currentRound = 1;
+        let autoMode = false;
+        let autoInterval = null;
+        let autoDelay = 100; // ms
+        
+        let currentMatch = { a: null, b: null, idxA: -1, idxB: -1 };
+
+        // DOM elements
+        const displayQuestion = document.getElementById("display-question");
+        const statRound = document.getElementById("stat-round");
+        const statMaxRound = document.getElementById("stat-max-round");
+        const statModeBadge = document.getElementById("stat-mode-badge");
+        const totalItemsBadge = document.getElementById("total-items-badge");
+
+        const optionAText = document.getElementById("option-a-text");
+        const optionAScore = document.getElementById("option-a-score");
+        const optionBText = document.getElementById("option-b-text");
+        const optionBScore = document.getElementById("option-b-score");
+        
+        const optionACard = document.getElementById("option-a-card");
+        const optionBCard = document.getElementById("option-b-card");
+
+        const btnToggleAI = document.getElementById("btn-toggle-ai");
+        const aiBtnSpinner = document.getElementById("ai-btn-spinner");
+        const aiBtnText = document.getElementById("ai-btn-text");
+        const btnNextManual = document.getElementById("btn-next-manual");
+        const btnReset = document.getElementById("btn-reset");
+
+        const speedSlider = document.getElementById("speed-slider");
+        const speedDisplay = document.getElementById("speed-display");
+
+        const leaderboardContainer = document.getElementById("leaderboard-container");
+        const logContainer = document.getElementById("log-container");
+        const clearLogs = document.getElementById("clear-logs");
+
+        // Modal Elements
+        const settingsModal = document.getElementById("settings-modal");
+        const btnOpenSettings = document.getElementById("btn-open-settings");
+        const btnCloseSettings = document.getElementById("btn-close-settings");
+        const btnSaveSettings = document.getElementById("btn-save-settings");
+        const inputQuestion = document.getElementById("input-question");
+        const inputMaxRound = document.getElementById("input-max-round");
+        const inputNewItem = document.getElementById("input-new-item");
+        const btnAddItem = document.getElementById("btn-add-item");
+        const settingsItemsList = document.getElementById("settings-items-list");
+
+        const endModal = document.getElementById("end-modal");
+        const endModalRounds = document.getElementById("end-modal-rounds");
+        const endWinnerText = document.getElementById("end-winner-text");
+        const endWinnerScore = document.getElementById("end-winner-score");
+        const btnEndReset = document.getElementById("btn-end-reset");
+        const btnEndClose = document.getElementById("btn-end-close");
+
+        // Helper: Random generator picking two distinct elements
+        function pickTwo(size) {
+            if (size < 2) return { a: 0, b: 0 };
+            let a = Math.floor(Math.random() * size);
+            let b = Math.floor(Math.random() * size);
+            while (b === a) {
+                b = Math.floor(Math.random() * size);
+            }
+            return { a, b };
+        }
+
+        // Initialize / Refresh Match Cards
+        function generateMatch() {
+            if (currentRound > maxRounds) {
+                endSimulation();
+                return;
+            }
+
+            if (answers.length < 2) {
+                addLog("오류: 시뮬레이션을 하려면 최소 2개 이상의 아이템이 필요합니다.");
+                return;
+            }
+
+            const indices = pickTwo(answers.length);
+            currentMatch.idxA = indices.a;
+            currentMatch.idxB = indices.b;
+            currentMatch.a = answers[indices.a];
+            currentMatch.b = answers[indices.b];
+
+            // Update DOM UI for match cards
+            optionAText.textContent = currentMatch.a.text;
+            optionAScore.textContent = `점수: ${currentMatch.a.score.toFixed(2)}`;
+            optionBText.textContent = currentMatch.b.text;
+            optionBScore.textContent = `점수: ${currentMatch.b.score.toFixed(2)}`;
+
+            // Reset selection highlights if any
+            optionACard.classList.remove("border-indigo-500", "bg-indigo-950/40");
+            optionBCard.classList.remove("border-purple-500", "bg-purple-950/40");
+        }
+
+        // Standard selection updates matching C++ algorithm
+        function resolveMatch(winnerChoice) {
+            if (currentRound > maxRounds) return;
+
+            let winner = currentMatch.a;
+            let loser = currentMatch.b;
+            let winnerNum = 1;
+
+            if (winnerChoice === 2) {
+                winner = currentMatch.b;
+                loser = currentMatch.a;
+                winnerNum = 2;
+            }
+
+            // Calculations
+            winner.score += 0.05;
+            loser.score -= 0.02;
+
+            // Enforce floor limit of 0.0
+            answers.forEach(item => {
+                if (item.score < 0.0) item.score = 0.0;
+            });
+
+            // Log entry
+            addLog(`[Round ${currentRound}] '${winner.text}' 승리 vs '${loser.text}' 패배`);
+
+            // Update UI
+            updateLeaderboard();
+            statRound.textContent = currentRound;
+            
+            // Increment
+            currentRound++;
+
+            if (currentRound > maxRounds) {
+                endSimulation();
+            } else {
+                generateMatch();
+            }
+        }
+
+        // AI Match Decision Engine
+        function handleAIStep() {
+            if (!autoMode) return;
+
+            const a = currentMatch.a;
+            const b = currentMatch.b;
+            const total = a.score + b.score;
+            let winnerChoice = 1;
+
+            if (total <= 0) {
+                // If both are 0, fallback to 50/50 probability
+                winnerChoice = Math.random() < 0.5 ? 1 : 2;
+            } else {
+                const r = Math.random();
+                if (r < (a.score / total)) {
+                    winnerChoice = 1;
+                } else {
+                    winnerChoice = 2;
+                }
+            }
+
+            // Visual feedback indicator for AI Choice before execution
+            if (winnerChoice === 1) {
+                optionACard.classList.add("border-indigo-500", "bg-indigo-950/40");
+            } else {
+                optionBCard.classList.add("border-purple-500", "bg-purple-950/40");
+            }
+
+            resolveMatch(winnerChoice);
+        }
+
+        // UI Event triggers
+        optionACard.addEventListener("click", () => {
+            if (autoMode) return; // Prevent clicking during AI mode
+            resolveMatch(1);
+        });
+
+        optionBCard.addEventListener("click", () => {
+            if (autoMode) return;
+            resolveMatch(2);
+        });
+
+        btnNextManual.addEventListener("click", () => {
+            if (autoMode) return;
+            addLog(`[Round ${currentRound}] 매치업 수동 스킵 완료`);
+            generateMatch();
+        });
+
+        // AI Toggle Controller
+        btnToggleAI.addEventListener("click", () => {
+            if (answers.length < 2) {
+                addLog("아이템 개수가 부족해 AI를 활성화할 수 없습니다.");
+                return;
+            }
+
+            autoMode = !autoMode;
+
+            if (autoMode) {
+                // Activate AI mode
+                aiBtnSpinner.classList.remove("hidden");
+                aiBtnText.textContent = "AI 중지하기";
+                btnToggleAI.classList.replace("bg-indigo-600", "bg-amber-600");
+                btnToggleAI.classList.replace("hover:bg-indigo-500", "hover:bg-amber-500");
+                statModeBadge.textContent = "AI 자동 시뮬레이션 중";
+                statModeBadge.classList.replace("text-emerald-400", "text-amber-400");
+                
+                // Block manual controls
+                btnNextManual.disabled = true;
+                btnNextManual.classList.add("opacity-30", "cursor-not-allowed");
+
+                // Start loop
+                autoInterval = setInterval(handleAIStep, autoDelay);
+            } else {
+                // Disable AI mode
+                stopAI();
+            }
+        });
+
+        function stopAI() {
+            autoMode = false;
+            clearInterval(autoInterval);
+            aiBtnSpinner.classList.add("hidden");
+            aiBtnText.textContent = "Run_AI 자동 실행";
+            btnToggleAI.classList.replace("bg-amber-600", "bg-indigo-600");
+            btnToggleAI.classList.replace("hover:bg-amber-500", "hover:bg-indigo-500");
+            statModeBadge.textContent = "수동 선택 대기";
+            statModeBadge.classList.replace("text-amber-400", "text-emerald-400");
+
+            btnNextManual.disabled = false;
+            btnNextManual.classList.remove("opacity-30", "cursor-not-allowed");
+        }
+
+        // Change simulation speed slider
+        speedSlider.addEventListener("input", (e) => {
+            autoDelay = parseInt(e.target.value);
+            speedDisplay.textContent = `${autoDelay}ms`;
+
+            if (autoMode) {
+                // Re-initialize interval with new speed configuration
+                clearInterval(autoInterval);
+                autoInterval = setInterval(handleAIStep, autoDelay);
+            }
+        });
+
+        // Live Log Append Function
+        function addLog(message) {
+            const entry = document.createElement("div");
+            entry.className = "py-0.5 border-b border-slate-900/50 hover:bg-slate-900/20 transition-all";
+            entry.innerHTML = `<span class="text-slate-600">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        clearLogs.addEventListener("click", () => {
+            logContainer.innerHTML = "";
+            addLog("로그가 정상적으로 초기화되었습니다.");
+        });
+
+        // Leaderboard generator & sorting mechanism
+        function updateLeaderboard() {
+            // Sort answers based on current active values
+            const sorted = [...answers].sort((x, y) => y.score - x.score);
+
+            // Fetch absolute max to display relative width progress bars
+            const maxVal = Math.max(...sorted.map(i => i.score), 1.0);
+
+            leaderboardContainer.innerHTML = "";
+
+            sorted.forEach((item, index) => {
+                const percent = (item.score / maxVal) * 100;
+                
+                // Highlight item if it's currently on the hot seat (A or B active)
+                const isCurrentActive = currentMatch.a?.text === item.text || currentMatch.b?.text === item.text;
+                const activeBorder = isCurrentActive ? "border-indigo-500/80 bg-indigo-950/20" : "border-slate-800 bg-slate-900/40";
+                
+                let rankBadge = `<span class="w-6 h-6 rounded-md bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold">${index + 1}</span>`;
+                if (index === 0) rankBadge = `<span class="w-6 h-6 rounded-md bg-amber-500 text-slate-950 flex items-center justify-center text-xs font-extrabold shadow-md shadow-amber-500/20">1👑</span>`;
+                else if (index === 1) rankBadge = `<span class="w-6 h-6 rounded-md bg-slate-300 text-slate-950 flex items-center justify-center text-xs font-bold">2</span>`;
+                else if (index === 2) rankBadge = `<span class="w-6 h-6 rounded-md bg-amber-800 text-amber-100 flex items-center justify-center text-xs font-bold">3</span>`;
+
+                const element = document.createElement("div");
+                element.className = `p-3.5 rounded-xl border ${activeBorder} flex items-center justify-between gap-4 transition-all duration-300`;
+                element.innerHTML = `
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        ${rankBadge}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="font-semibold text-sm text-slate-200 truncate">${item.text}</span>
+                                <span class="text-xs font-mono font-bold text-indigo-400">${item.score.toFixed(2)}</span>
+                            </div>
+                            <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full rounded-full transition-all duration-300" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                leaderboardContainer.appendChild(element);
+            });
+
+            // Update global settings configurations
+            totalItemsBadge.textContent = `${answers.length}개 선택지`;
+        }
+
+        // Stop simulation & trigger modal end screen
+        function endSimulation() {
+            stopAI();
+            const sorted = [...answers].sort((x, y) => y.score - x.score);
+            const winner = sorted[0] || { text: "N/A", score: 0.0 };
+
+            endModalRounds.textContent = maxRounds;
+            endWinnerText.textContent = winner.text;
+            endWinnerScore.textContent = `최종 획득 점수: ${winner.score.toFixed(2)}`;
+
+            endModal.classList.remove("hidden");
+        }
+
+        // Full reset to default configuration options
+        function resetSimulation() {
+            stopAI();
+            currentRound = 1;
+            answers = JSON.parse(JSON.stringify(defaultAnswers));
+            question = defaultQuestion;
+            maxRounds = defaultMaxRounds;
+
+            displayQuestion.textContent = question;
+            statRound.textContent = currentRound;
+            statMaxRound.textContent = maxRounds;
+
+            addLog("시스템 시뮬레이션 환경이 전면 초기화되었습니다.");
+            generateMatch();
+            updateLeaderboard();
+        }
+
+        btnReset.addEventListener("click", () => {
+            if (confirm("정말로 모든 점수를 초기화하고 첫 대전 단계로 복원하시겠습니까?")) {
+                resetSimulation();
+            }
+        });
+
+        // Modal triggers
+        btnOpenSettings.addEventListener("click", () => {
+            inputQuestion.value = question;
+            inputMaxRound.value = maxRounds;
+            renderSettingsItemList();
+            settingsModal.classList.remove("hidden");
+        });
+
+        btnCloseSettings.addEventListener("click", () => {
+            settingsModal.classList.add("hidden");
+        });
+
+        // Add dynamically input element
+        btnAddItem.addEventListener("click", () => {
+            const val = inputNewItem.value.trim();
+            if (!val) return;
+            
+            // Check duplicates
+            if (answers.some(item => item.text === val)) {
+                alert("이미 등록된 데이터입니다.");
+                return;
+            }
+
+            answers.push({ text: val, score: 0.5 });
+            inputNewItem.value = "";
+            renderSettingsItemList();
+        });
+
+        // Manage internal active items
+        function renderSettingsItemList() {
+            settingsItemsList.innerHTML = "";
+            answers.forEach((item, index) => {
+                const el = document.createElement("div");
+                el.className = "flex justify-between items-center bg-slate-950 px-3 py-2 rounded-lg border border-slate-800 text-sm";
+                el.innerHTML = `
+                    <span class="text-slate-300">${item.text} <span class="text-xs text-slate-500">(점수: ${item.score.toFixed(2)})</span></span>
+                    <button class="text-rose-400 hover:text-rose-300 font-bold px-1 text-xs" onclick="removeItemFromSettings(${index})">삭제</button>
+                `;
+                settingsItemsList.appendChild(el);
+            });
+        }
+
+        window.removeItemFromSettings = function(index) {
+            if (answers.length <= 2) {
+                alert("토너먼트를 진행하려면 최소 2개 이상의 아이템이 리스트에 상주해야 합니다.");
+                return;
+            }
+            answers.splice(index, 1);
+            renderSettingsItemList();
+        };
+
+        // Complete save from config layout
+        btnSaveSettings.addEventListener("click", () => {
+            const nextQuestion = inputQuestion.value.trim();
+            const nextMaxRound = parseInt(inputMaxRound.value);
+
+            if (!nextQuestion) {
+                alert("주제 질문은 공백일 수 없습니다.");
+                return;
+            }
+
+            if (isNaN(nextMaxRound) || nextMaxRound < 1) {
+                alert("최대 라운드 횟수는 1 이상의 정수여야 합니다.");
+                return;
+            }
+
+            question = nextQuestion;
+            maxRounds = nextMaxRound;
+            displayQuestion.textContent = question;
+            statMaxRound.textContent = maxRounds;
+
+            settingsModal.classList.add("hidden");
+            addLog("세팅 설정이 새로 고쳐졌습니다. 변경 사항이 화면에 적용되었습니다.");
+
+            // Standard regenerate with the updated layout context
+            generateMatch();
+            updateLeaderboard();
+        });
+
+        // End Modal Buttons
+        btnEndReset.addEventListener("click", () => {
+            endModal.classList.add("hidden");
+            resetSimulation();
+        });
+
+        btnEndClose.addEventListener("click", () => {
+            endModal.classList.add("hidden");
+        });
+
+        // Initialize App on Window Load
+        window.onload = function() {
+            displayQuestion.textContent = question;
+            statMaxRound.textContent = maxRounds;
+            generateMatch();
+            updateLeaderboard();
+        };
+    </script>
+</body>
+</html>
